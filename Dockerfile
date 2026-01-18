@@ -1,26 +1,24 @@
+# Use official PHP image with Apache
 FROM php:8.2-apache
 
-# ===== System dependencies (IMPORTANT for curl) =====
-RUN apt-get update && apt-get install -y \
-    libcurl4-openssl-dev \
-    pkg-config \
-    && docker-php-ext-install curl \
-    && a2enmod rewrite \
-    && rm -rf /var/lib/apt/lists/*
+# Enable required extensions
+RUN apt-get update && apt-get install -y libcurl4-openssl-dev pkg-config unzip && \
+    docker-php-ext-install curl
 
-# ===== Apache config =====
-RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+# Enable mod_rewrite
+RUN a2enmod rewrite
 
-# ===== Workdir =====
+# Set working directory
 WORKDIR /var/www/html
 
-# ===== Copy project =====
-COPY . /var/www/html
+# Copy files
+COPY . .
 
-# ===== Permissions for JSON storage =====
-RUN mkdir -p /var/www/html/data \
-    && chown -R www-data:www-data /var/www/html/data \
-    && chmod -R 777 /var/www/html/data
+# Create data folder and set permissions
+RUN mkdir -p data && chown -R www-data:www-data data && chmod -R 777 data
 
-# ===== Expose port =====
+# Expose default port
 EXPOSE 80
+
+# Start Apache
+CMD ["apache2-foreground"]
