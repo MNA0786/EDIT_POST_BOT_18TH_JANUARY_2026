@@ -9,15 +9,15 @@ RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     pkg-config \
     libssl-dev \
-    git \
-    unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP curl extension
-RUN docker-php-ext-install curl
+# Install PHP curl extension (simpler method)
+RUN apt-get update && apt-get install -y libcurl4-openssl-dev \
+    && docker-php-ext-configure curl \
+    && docker-php-ext-install curl
 
-# Enable Apache rewrite module
-RUN a2enmod rewrite
+# Enable Apache modules
+RUN a2enmod rewrite headers
 
 # Copy Apache configuration
 COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
@@ -39,10 +39,6 @@ RUN touch /var/www/html/error.log \
 
 # Expose port 80
 EXPOSE 80
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/ || exit 1
 
 # Start Apache in foreground
 CMD ["apache2-foreground"]
