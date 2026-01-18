@@ -1,38 +1,23 @@
 <?php
-/* ================================
-   TADKA MOVIE BOT – ADMIN PANEL
-   Video-based | Multi-channel | Auto Edit | Schedule
-   ================================ */
+/* =====================================================
+   TADKA MOVIE BOT – SINGLE FILE ENGINE
+   Platform: Render.com (Webhook)
+   Authorised Admin Panel
+   ===================================================== */
 
-// ---------- CONFIG ----------
-$BOT_TOKEN = "7928919721:AAEM-62e16367cP9HPMFCpqhSc00f3YjDkQ";
-$API_URL = "https://api.telegram.org/bot$BOT_TOKEN/";
+require_once __DIR__ . "/config.php";
 
-$OWNER_ID = 1080317415;
+/* ================= BASIC SETUP ================= */
+$API_URL = "https://api.telegram.org/bot" . BOT_TOKEN;
+$update = json_decode(file_get_contents("php://input"), true);
+if (!$update) exit;
 
-$CHANNELS = [
-    "-1003181705395" => "@EntertainmentTadka786",
-    "-1002964109368" => "@ETBackup",
-    "-1002831605258" => "@threater_print_movies",
-    "-1002337293281" => "Backup Channel 2",
-    "-1003251791991" => "Private Channel",
-    "-1003614546520" => "Forwarded From Any Channel"
-];
-
-$DATA_DIR = __DIR__ . "/data";
-if (!file_exists($DATA_DIR)) mkdir($DATA_DIR, 0777, true);
-
-$STATE_FILE = "$DATA_DIR/state.json";
-$POST_MAP_FILE = "$DATA_DIR/post_map.json";
-$STATS_FILE = "$DATA_DIR/stats.json";
-
-// ---------- BASIC FUNCTIONS ----------
-function tg($method, $data = []) {
+/* ================= HELPERS ================= */
+function api($method, $data = []) {
     global $API_URL;
-    $ch = curl_init($API_URL . $method);
+    $ch = curl_init($API_URL . "/" . $method);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $data
     ]);
     $res = curl_exec($ch);
@@ -40,172 +25,217 @@ function tg($method, $data = []) {
     return json_decode($res, true);
 }
 
-function sendMessage($chat_id, $text, $keyboard = null) {
-    $data = [
-        "chat_id" => $chat_id,
+function send($chat, $text, $extra = []) {
+    api("sendMessage", array_merge([
+        "chat_id" => $chat,
         "text" => $text,
         "parse_mode" => "HTML"
-    ];
-    if ($keyboard) $data["reply_markup"] = json_encode($keyboard);
-    tg("sendMessage", $data);
+    ], $extra));
 }
 
-function editMessage($chat_id, $msg_id, $text) {
-    tg("editMessageCaption", [
-        "chat_id" => $chat_id,
-        "message_id" => $msg_id,
-        "caption" => $text,
-        "parse_mode" => "HTML"
-    ]);
+function keyboard($buttons) {
+    return json_encode(["inline_keyboard" => $buttons]);
 }
 
-function typingDelay($chat_id) {
-    tg("sendChatAction", ["chat_id"=>$chat_id,"action"=>"typing"]);
-    usleep(rand(500000,1200000));
+function logEvent($text) {
+    if (!ENABLE_LOGGING) return;
+    file_put_contents(LOG_FILE, "[".date("d-m-Y H:i:s")."] ".$text."\n", FILE_APPEND);
 }
 
-// ---------- LOAD FILES ----------
-$state = file_exists($STATE_FILE) ? json_decode(file_get_contents($STATE_FILE), true) : [];
-$postMap = file_exists($POST_MAP_FILE) ? json_decode(file_get_contents($POST_MAP_FILE), true) : [];
-$stats = file_exists($STATS_FILE) ? json_decode(file_get_contents($STATS_FILE), true) : [
-    "today_posts"=>0,"today_edits"=>0,"total_posts"=>0,"total_edits"=>0
-];
+/* ================= STORAGE ================= */
+function readJson($file, $default = []) {
+    if (!file_exists($file)) return $default;
+    return json_decode(file_get_contents($file), true);
+}
 
-// ---------- UPDATE ----------
-$update = json_decode(file_get_contents("php://input"), true);
-if (!$update) exit;
+function writeJson($file, $data) {
+    file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+}
 
+/* ================= UPDATE TYPES ================= */
 $message = $update["message"] ?? null;
 $callback = $update["callback_query"] ?? null;
 
-// =================================================
-// =============== START COMMAND ===================
-// =================================================
+/* ================= MESSAGE HANDLER ================= */
 if ($message) {
+
     $chat_id = $message["chat"]["id"];
     $user_id = $message["from"]["id"];
-    $text = $message["text"] ?? "";
+    $text = trim($message["text"] ?? "");
 
-    if ($user_id != $OWNER_ID) exit;
+    if (!isAdmin($user_id)) {
+        send($chat_id, "❌ Access Denied");
+        exit;
+    }
 
-    // /start
+    /* ===== START ===== */
     if ($text == "/start") {
-        $keyboard = [
-            "inline_keyboard" => [
-                [["text"=>"➕ Create Post","callback_data"=>"create"]],
-                [["text"=>"⏰ Scheduled Posts","callback_data"=>"schedule"],["text"=>"✏️ Edit Post","callback_data"=>"edit"]],
-                [["text"=>"📊 Channel Stats","callback_data"=>"stats"],["text"=>"⚙️ Settings","callback_data"=>"settings"]]
+
+        $btns = [
+            [
+                ["text"=>"➕ Create Post","callback_data"=>"create"],
+                ["text"=>"⏰ Schedule","callback_data"=>"schedule"]
+            ],
+            [
+                ["text"=>"✏️ Edit Post","callback_data"=>"edit"],
+                ["text"=>"📊 Stats","callback_data"=>"stats"]
+            ],
+            [
+                ["text"=>"⚙️ Settings","callback_data"=>"settings"]
             ]
         ];
-        sendMessage($chat_id,
-            "🔥 <b>Tadka Movie Bot Admin Panel</b>\n\nHere you can create rich posts, view stats and accomplish other tasks.",
-            $keyboard
+
+        send($chat_id,
+        "🔥 <b>Tadka Movie Bot Admin Panel</b>\n\nSelect an option:",
+        ["reply_markup"=>keyboard($btns)]
         );
-        exit;
     }
 
-    // ---------- MEDIA HANDLING ----------
-    if (isset($state[$user_id]) && $state[$user_id]["step"] == "WAIT_VIDEO") {
-        if (!isset($message["video"]) && !isset($message["document"])) {
-            sendMessage($chat_id, "❌ Sirf video/document forward karo");
-            exit;
-        }
+    /* ===== VIDEO FORWARD DETECT ===== */
+    if (isset($message["video"])) {
 
-        $state[$user_id]["file"] = $message["video"] ?? $message["document"];
-        $state[$user_id]["step"] = "WAIT_CAPTION";
-        file_put_contents($STATE_FILE, json_encode($state));
+        $state = readJson(STATE_FILE);
+        $state[$user_id] = [
+            "step" => "CHANNEL_SELECT",
+            "file_id" => $message["video"]["file_id"],
+            "caption" => $message["caption"] ?? ""
+        ];
+        writeJson(STATE_FILE, $state);
 
-        sendMessage($chat_id, "✍️ Ab caption + buttons bhejo");
-        exit;
-    }
-
-    // ---------- CAPTION ----------
-    if (isset($state[$user_id]) && $state[$user_id]["step"] == "WAIT_CAPTION") {
-        $state[$user_id]["caption"] = $text;
-        $state[$user_id]["step"] = "SELECT_CHANNELS";
-        file_put_contents($STATE_FILE, json_encode($state));
-
-        $kb = ["inline_keyboard"=>[]];
-        foreach ($CHANNELS as $cid=>$name) {
-            $kb["inline_keyboard"][] = [
-                ["text"=>"☑️ $name","callback_data"=>"ch_$cid"]
+        $btns = [];
+        foreach ($GLOBALS["CHANNELS"] as $cid => $name) {
+            $btns[] = [
+                ["text"=>"⬜ ".$name,"callback_data"=>"ch_".$cid]
             ];
         }
-        $kb["inline_keyboard"][] = [["text"=>"✅ POST","callback_data"=>"post_now"]];
+        $btns[] = [
+            ["text"=>"✅ Post Now","callback_data"=>"post_now"]
+        ];
 
-        sendMessage($chat_id, "📢 Channels select karo:", $kb);
-        exit;
+        send($chat_id,
+        "📌 <b>Channels select karo</b>\nVideo ready hai:",
+        ["reply_markup"=>keyboard($btns)]
+        );
     }
 }
 
-// =================================================
-// =============== CALLBACK HANDLER =================
-// =================================================
+/* ================= CALLBACK HANDLER ================= */
 if ($callback) {
-    $data = $callback["data"];
+
     $chat_id = $callback["message"]["chat"]["id"];
     $user_id = $callback["from"]["id"];
+    $data = $callback["data"];
 
-    if ($user_id != $OWNER_ID) exit;
+    if (!isAdmin($user_id)) exit;
 
-    // CREATE POST
+    $state = readJson(STATE_FILE);
+
+    /* ===== CREATE ===== */
     if ($data == "create") {
-        typingDelay($chat_id);
-        sendMessage($chat_id, "🎬 Video forward karo (Telegram me jo post karni hai)");
-        $state[$user_id] = ["step"=>"WAIT_VIDEO","channels"=>[]];
-        file_put_contents($STATE_FILE, json_encode($state));
-        exit;
+        send($chat_id, "📹 Video forward karo (caption + buttons ke saath)");
     }
 
-    // CHANNEL SELECT
-    if (str_starts_with($data,"ch_")) {
+    /* ===== CHANNEL TOGGLE ===== */
+    if (strpos($data,"ch_") === 0) {
         $cid = str_replace("ch_","",$data);
-        if (!in_array($cid,$state[$user_id]["channels"]))
-            $state[$user_id]["channels"][] = $cid;
-        file_put_contents($STATE_FILE, json_encode($state));
-        exit;
+
+        $state[$user_id]["channels"][$cid] =
+            !($state[$user_id]["channels"][$cid] ?? false);
+
+        writeJson(STATE_FILE,$state);
+
+        $btns=[];
+        foreach ($GLOBALS["CHANNELS"] as $id=>$name){
+            $mark = !empty($state[$user_id]["channels"][$id]) ? "✅" : "⬜";
+            $btns[]=[[ "text"=>"$mark $name","callback_data"=>"ch_$id" ]];
+        }
+        $btns[]=[[ "text"=>"🚀 Post Now","callback_data"=>"post_now" ]];
+
+        api("editMessageReplyMarkup",[
+            "chat_id"=>$chat_id,
+            "message_id"=>$callback["message"]["message_id"],
+            "reply_markup"=>keyboard($btns)
+        ]);
     }
 
-    // POST NOW
-    if ($data == "post_now") {
+    /* ===== POST NOW ===== */
+    if ($data=="post_now") {
+
         $info = $state[$user_id];
-        foreach ($info["channels"] as $cid) {
-            $res = tg("copyMessage",[
+        $map = readJson(POST_MAP_FILE);
+
+        foreach ($info["channels"] as $cid=>$ok) {
+            if (!$ok) continue;
+
+            $res = api("sendVideo",[
                 "chat_id"=>$cid,
-                "from_chat_id"=>$callback["message"]["chat"]["id"],
-                "message_id"=>$info["file"]["file_id"],
+                "video"=>$info["file_id"],
                 "caption"=>$info["caption"],
                 "parse_mode"=>"HTML"
             ]);
-            if ($res["ok"]) {
-                $postMap[$info["file"]["file_id"]][] = [
-                    "chat"=>$cid,
-                    "msg"=>$res["result"]["message_id"]
-                ];
-            }
+
+            $mid = $res["result"]["message_id"];
+            $map[$info["file_id"]][$cid] = $mid;
         }
 
-        $stats["today_posts"]++;
-        $stats["total_posts"]++;
+        writeJson(POST_MAP_FILE,$map);
 
-        file_put_contents($POST_MAP_FILE, json_encode($postMap));
-        file_put_contents($STATS_FILE, json_encode($stats));
+        // stats
+        $stats = readJson(STATS_FILE);
+        $today = date("Y-m-d");
+        $stats["total_posts"]++;
+        $stats["daily"][$today]["posts"] =
+            ($stats["daily"][$today]["posts"] ?? 0) + 1;
+        writeJson(STATS_FILE,$stats);
 
         unset($state[$user_id]);
-        file_put_contents($STATE_FILE, json_encode($state));
+        writeJson(STATE_FILE,$state);
 
-        sendMessage($chat_id, "✅ Post created & synced in selected channels");
-        exit;
+        send($chat_id,"✅ <b>Video posted successfully</b>");
     }
 
-    // STATS
-    if ($data == "stats") {
-        $txt = "📊 <b>Analytics</b>\n\n".
-               "Today Posts: {$stats["today_posts"]}\n".
-               "Today Edits: {$stats["today_edits"]}\n".
-               "Total Posts: {$stats["total_posts"]}\n".
-               "Total Edits: {$stats["total_edits"]}";
-        sendMessage($chat_id, $txt);
-        exit;
+    /* ===== STATS ===== */
+    if ($data=="stats") {
+        $stats = readJson(STATS_FILE);
+        $today = date("Y-m-d");
+
+        send($chat_id,
+        "📊 <b>Analytics</b>\n\n".
+        "Today Posts: ".($stats["daily"][$today]["posts"] ?? 0)."\n".
+        "Today Edits: ".($stats["daily"][$today]["edits"] ?? 0)."\n\n".
+        "Total Posts: ".($stats["total_posts"] ?? 0)."\n".
+        "Total Edits: ".($stats["total_edits"] ?? 0)
+        );
     }
+}
+
+/* ================= AUTO EDIT SYNC ================= */
+// Agar tum original channel me caption edit karoge,
+// to yahan se sab channels me auto edit ho jayega
+
+if (isset($update["edited_message"]["video"])) {
+
+    $file_id = $update["edited_message"]["video"]["file_id"];
+    $new_caption = $update["edited_message"]["caption"] ?? "";
+
+    $map = readJson(POST_MAP_FILE);
+    if (!isset($map[$file_id])) exit;
+
+    foreach ($map[$file_id] as $cid=>$mid){
+        api("editMessageCaption",[
+            "chat_id"=>$cid,
+            "message_id"=>$mid,
+            "caption"=>$new_caption,
+            "parse_mode"=>"HTML"
+        ]);
+    }
+
+    $stats = readJson(STATS_FILE);
+    $today=date("Y-m-d");
+    $stats["total_edits"]++;
+    $stats["daily"][$today]["edits"] =
+        ($stats["daily"][$today]["edits"] ?? 0)+1;
+    writeJson(STATS_FILE,$stats);
+
+    logEvent("Auto-edit sync done");
 }
