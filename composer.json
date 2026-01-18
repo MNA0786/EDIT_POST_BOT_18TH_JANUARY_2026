@@ -1,8 +1,29 @@
 {
-  "name": "tadka/movie-bot",
-  "description": "Telegram Movie Bot - Full Render.com setup",
-  "require": {
-    "php": ">=8.2",
-    "ext-curl": "*"
-  }
+    "name": "tadka/telegram-bot",
+    "description": "Telegram Movie Bot Admin Panel",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mahatab Ansari",
+            "email": "owner@entertainmenttadka.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "ext-curl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "TadkaBot\\": "src/"
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "chmod -R 777 data"
+        ]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }
