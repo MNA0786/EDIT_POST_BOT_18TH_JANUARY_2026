@@ -1,10 +1,21 @@
-version: '3'
+version: '3.8'
+
 services:
-  web:
+  tadka-bot:
     build: .
+    container_name: tadka-movie-bot
     ports:
-      - "80:80"
+      - "8080:80"
     volumes:
       - .:/var/www/html
+      - ./data:/var/www/html/data
     environment:
-      BOT_TOKEN: 7928919721:AAEM-62e16367cP9HPMFCpqhSc00f3YjDkQ
+      - BOT_TOKEN=7928919721:AAEM-62e16367cP9HPMFCpqhSc00f3YjDkQ
+      - TZ=Asia/Kolkata
+    restart: unless-stopped
+    networks:
+      - tadka-network
+
+networks:
+  tadka-network:
+    driver: bridge
