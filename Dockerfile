@@ -1,24 +1,48 @@
-# Use official PHP image with Apache
+# Use official PHP Apache image
 FROM php:8.2-apache
-
-# Enable required extensions
-RUN apt-get update && apt-get install -y libcurl4-openssl-dev pkg-config unzip && \
-    docker-php-ext-install curl
-
-# Enable mod_rewrite
-RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy files
-COPY . .
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libcurl4-openssl-dev \
+    pkg-config \
+    libssl-dev \
+    git \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create data folder and set permissions
-RUN mkdir -p data && chown -R www-data:www-data data && chmod -R 777 data
+# Install PHP curl extension
+RUN docker-php-ext-install curl
 
-# Expose default port
+# Enable Apache rewrite module
+RUN a2enmod rewrite
+
+# Copy Apache configuration
+COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# Copy all application files
+COPY . /var/www/html/
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod -R 755 /var/www/html \
+    && mkdir -p /var/www/html/data \
+    && chmod -R 777 /var/www/html/data
+
+# Create necessary files with proper permissions
+RUN touch /var/www/html/error.log \
+    && touch /var/www/html/data/error.log \
+    && chmod 666 /var/www/html/error.log \
+    && chmod 666 /var/www/html/data/error.log
+
+# Expose port 80
 EXPOSE 80
 
-# Start Apache
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+# Start Apache in foreground
 CMD ["apache2-foreground"]
