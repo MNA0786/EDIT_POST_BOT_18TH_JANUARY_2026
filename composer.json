@@ -1,7 +1,8 @@
 {
-    "name": "tadka/movie-bot",
-    "description": "Telegram Movie Bot single-file",
-    "require": {
-        "php": ">=8.0"
-    }
+  "name": "tadka/movie-bot",
+  "description": "Telegram Movie Bot - Full Render.com setup",
+  "require": {
+    "php": ">=8.2",
+    "ext-curl": "*"
+  }
 }
