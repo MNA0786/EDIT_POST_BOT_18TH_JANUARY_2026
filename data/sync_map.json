@@ -1,0 +1,36 @@
+[
+    {
+        "source_chat": -1003181705395,
+        "source_msg": 1234,
+        "source_file_id": "BAACAgQAAxkBAAIBAAFlP6S2q1z...",
+        "targets": [
+            {
+                "chat_id": -1002964109368,
+                "message_id": 5678
+            },
+            {
+                "chat_id": -1002831605258,
+                "message_id": 9101
+            },
+            {
+                "chat_id": -1002337293281,
+                "message_id": 1121
+            }
+        ],
+        "caption": "Krack (2021) 1080p HDRip South Movie ORG. [Dual Audio] [Hindi or Telugu] x264 ESubs.mkv\n\n🚀 ᴊᴏɪɴ  ➥「 @OttHD_Media 」\n🚀 ᴊᴏɪɴ  ➥「 @Cricket_World_Club 」",
+        "buttons": {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "⬇️ Download",
+                        "url": "https://t.me/TadkaMovieBot"
+                    }
+                ]
+            ]
+        },
+        "created_at": 1737243000,
+        "edited_at": null,
+        "edited_by": null,
+        "scheduled": false
+    }
+]
