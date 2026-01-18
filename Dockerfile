@@ -1,22 +1,26 @@
 FROM php:8.2-apache
 
-# Install required system packages for PHP extensions
+# ===== System dependencies (IMPORTANT for curl) =====
 RUN apt-get update && apt-get install -y \
     libcurl4-openssl-dev \
     pkg-config \
-    libssl-dev \
-    git \
-    unzip \
-    && docker-php-ext-install curl
+    && docker-php-ext-install curl \
+    && a2enmod rewrite \
+    && rm -rf /var/lib/apt/lists/*
 
-# Enable mod_rewrite
-RUN a2enmod rewrite
+# ===== Apache config =====
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Copy project files
-COPY . /var/www/html/
+# ===== Workdir =====
+WORKDIR /var/www/html
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/data
-RUN chmod -R 777 /var/www/html/data
+# ===== Copy project =====
+COPY . /var/www/html
 
+# ===== Permissions for JSON storage =====
+RUN mkdir -p /var/www/html/data \
+    && chown -R www-data:www-data /var/www/html/data \
+    && chmod -R 777 /var/www/html/data
+
+# ===== Expose port =====
 EXPOSE 80
