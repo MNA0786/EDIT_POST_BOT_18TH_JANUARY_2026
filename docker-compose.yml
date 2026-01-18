@@ -1,0 +1,10 @@
+version: '3'
+services:
+  web:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      BOT_TOKEN: 7928919721:AAEM-62e16367cP9HPMFCpqhSc00f3YjDkQ
