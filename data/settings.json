@@ -1,3 +1,17 @@
 {
-  "typing_delay": 2
+    "typing_delay": 2,
+    "auto_sync": true,
+    "auto_delete_admin_reply": true,
+    "default_channels": [
+        -1003181705395,
+        -1002964109368
+    ],
+    "timezone": "Asia/Kolkata",
+    "schedule_check_interval": 60,
+    "max_posts_per_day": 50,
+    "button_template": "⬇️ Download 480p|https://t.me/TadkaMovieBot\n⬇️ Download 720p|https://t.me/TadkaMovieBot\n⬇️ Download 1080p|https://t.me/TadkaMovieBot\n🎬 Trailer|https://youtube.com",
+    "welcome_message": "🔥 Welcome to Tadka Movie Bot Admin Panel!\n\nManage your movie channels efficiently.",
+    "emergency_contact": "@MahatabAnsari",
+    "version": "3.0",
+    "last_updated": "2026-01-18 14:30:00"
 }
