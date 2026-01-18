@@ -1,1 +1,23 @@
-[]
+{
+    "1080317415": {
+        "id": 1080317415,
+        "username": "MahatabAnsari",
+        "first_name": "Mahatab",
+        "last_name": "Ansari",
+        "is_bot": false,
+        "language_code": "en",
+        "is_owner": true,
+        "joined_at": "2026-01-18 00:00:00",
+        "last_active": "2026-01-18 14:30:00",
+        "total_posts": 0,
+        "total_edits": 0,
+        "permissions": {
+            "create_post": true,
+            "edit_post": true,
+            "schedule_post": true,
+            "view_stats": true,
+            "change_settings": true,
+            "emergency_panic": true
+        }
+    }
+}
