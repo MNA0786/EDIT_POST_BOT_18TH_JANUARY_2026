@@ -1,1 +1,43 @@
-{"daily_posts":0,"daily_edits":0,"total_posts":0,"total_edits":0}
+{
+    "posts": 42,
+    "edits": 18,
+    "scheduled": 5,
+    "errors": 3,
+    "daily": {
+        "2026-01-18": {
+            "posts": 6,
+            "edits": 3,
+            "scheduled": 1,
+            "errors": 0
+        },
+        "2026-01-17": {
+            "posts": 8,
+            "edits": 5,
+            "scheduled": 2,
+            "errors": 1
+        },
+        "2026-01-16": {
+            "posts": 10,
+            "edits": 4,
+            "scheduled": 1,
+            "errors": 0
+        }
+    },
+    "channels": {
+        "-1003181705395": {
+            "posts": 42,
+            "last_post": "2026-01-18 14:25:00"
+        },
+        "-1002964109368": {
+            "posts": 38,
+            "last_post": "2026-01-18 14:25:00"
+        }
+    },
+    "users": {
+        "1080317415": {
+            "posts": 42,
+            "edits": 18,
+            "last_active": "2026-01-18 14:30:00"
+        }
+    }
+}
